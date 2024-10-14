@@ -1,6 +1,5 @@
 name: interactive
 run-name: "interactive: ${{ inputs.DEB_DISTRO || vars.DEB_DISTRO }}-${{ inputs.ROS_DISTRO || vars.ROS_DISTRO || 'one'}} ${{ inputs.ROS_SOURCES || vars.ROS_SOURCES }}"
-runs-on: self-hosted
 
 on:
   workflow_dispatch:
@@ -74,7 +73,8 @@ on:
 jobs:
   build:
     name: ${{ inputs.DEB_DISTRO || vars.DEB_DISTRO || 'latest' }}-${{ inputs.ROS_DISTRO || vars.ROS_DISTRO || 'one'}}
-    uses: ubi-agni/ros-builder-action/.github/workflows/build.yaml@main
+    runs-on: self-hosted
+    uses: larics/ros-builder-action/.github/workflows/build.yaml@main
     with:
       DEB_DISTRO: ${{ inputs.DEB_DISTRO || vars.DEB_DISTRO }}
       ROS_DISTRO: ${{ inputs.ROS_DISTRO || vars.ROS_DISTRO || 'one' }}
@@ -96,7 +96,7 @@ jobs:
   deploy:
     needs: build
     if: always() && ( inputs.PUSH_MODE != 'skip' ) && vars.DEPLOY_URL
-    uses: ubi-agni/ros-builder-action/.github/workflows/deploy.yaml@main
+    uses: larics/ros-builder-action/.github/workflows/deploy.yaml@main
     with:
       # content mode: 'add' if continueing build, 'replace' otherwise
       CONTENT_MODE: ${{ inputs.CONTINUE_BUILD && 'add' || 'replace' }}
