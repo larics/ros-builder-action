@@ -44,7 +44,7 @@ ici_timed "Install bloom" ici_asroot pip install -U git+https://github.com/rhasc
 # Install patched vcstool to allow for treeless clones
 ici_timed "Install vcstool" ici_asroot pip install -U git+https://github.com/rhaschke/vcstool.git@master
 
-ici_timed "rosdep init" ici_asroot rm /etc/ros/rosdep/sources.list.d/20-default.list && rosdep init
+ici_timed "rosdep init" ici_asroot rm -f /etc/ros/rosdep/sources.list.d/20-default.list && rosdep init
 
 # Start apt-cacher-ng if not yet running (for example in docker)
 ici_start_fold "Check apt-cacher-ng"
