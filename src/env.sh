@@ -79,7 +79,7 @@ if debian-distro-info --all | grep -q "$DEB_DISTRO"; then
 
 elif ubuntu-distro-info --all | grep -q "$DEB_DISTRO"; then
 	export DISTRIBUTION=ubuntu
-	export DISTRIBUTION_REPO=http://azure.archive.ubuntu.com/ubuntu
+	export DISTRIBUTION_REPO=http://ports.archive.ubuntu.com/ubuntu
 else
 	gha_error "Unknown DEB_DISTRO: $DEB_DISTRO"
 	ici_exit 1
