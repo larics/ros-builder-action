@@ -44,7 +44,7 @@ ici_timed "Install bloom" ici_asroot pip install -U git+https://github.com/rhasc
 # Install patched vcstool to allow for treeless clones
 ici_timed "Install vcstool" ici_asroot pip install -U git+https://github.com/rhaschke/vcstool.git@master
 
-ici_timed "rosdep init" ici_asroot rm -f /etc/ros/rosdep/sources.list.d/20-default.list && ici_asroot rosdep init
+ici_timed "rosdep init" ici_asroot rosdep init
 
 # Start apt-cacher-ng if not yet running (for example in docker)
 ici_start_fold "Check apt-cacher-ng"
@@ -60,7 +60,7 @@ ici_timed "Download existing rosdep declarations" load_local_yaml
 export CCACHE_DIR="${CCACHE_DIR:-$HOME/ccache}"
 ici_timed "Configure ccache" ccache --zero-stats --max-size=10.0G
 
-ici_timed "Create sbuild chroot" ici_asroot rm -rf /var/cache/sbuild-chroot/ && create_chroot
+ici_timed "Create sbuild chroot" create_chroot
 
 ici_timed "Configure ~/.sbuildrc" configure_sbuildrc
 
