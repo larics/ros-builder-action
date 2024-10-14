@@ -151,7 +151,7 @@ jobs:
             ${{ env.CCACHE_ID }}
 
       - name: Build .deb packages
-        uses: ubi-agni/ros-builder-action@main
+        uses: larics/ros-builder-action@main
         id: build
         with:
           EXPECT_EXIT_CODE: ${{ inputs.EXPECT_EXIT_CODE }}
