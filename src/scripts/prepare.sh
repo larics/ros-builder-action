@@ -60,7 +60,7 @@ ici_timed "Download existing rosdep declarations" load_local_yaml
 export CCACHE_DIR="${CCACHE_DIR:-$HOME/ccache}"
 ici_timed "Configure ccache" ccache --zero-stats --max-size=10.0G
 
-ici_timed "Create sbuild chroot" create_chroot
+ici_timed "Create sbuild chroot" ici_asroot rm -rf /var/cache/sbuild-chroot/ && create_chroot
 
 ici_timed "Configure ~/.sbuildrc" configure_sbuildrc
 
