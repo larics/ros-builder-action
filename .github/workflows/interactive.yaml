@@ -73,8 +73,7 @@ on:
 jobs:
   build:
     name: ${{ inputs.DEB_DISTRO || vars.DEB_DISTRO || 'latest' }}-${{ inputs.ROS_DISTRO || vars.ROS_DISTRO || 'one'}}
-    runs-on: self-hosted
-    uses: ubi-agni/ros-builder-action/.github/workflows/build.yaml@main
+    uses: larics/ros-builder-action/.github/workflows/build.yaml@main
     with:
       DEB_DISTRO: ${{ inputs.DEB_DISTRO || vars.DEB_DISTRO }}
       ROS_DISTRO: ${{ inputs.ROS_DISTRO || vars.ROS_DISTRO || 'one' }}
