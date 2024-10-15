@@ -118,6 +118,7 @@ env:
 
 jobs:
   debs:
+    timeout-minutes: 10080
     runs-on: self-hosted
     name: build debs
     outputs:
