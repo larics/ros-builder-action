@@ -75,10 +75,6 @@ repositories:
     type: git
     url: https://github.com/mikeferguson/code_coverage.git
     version: master
-  collada_urdf:
-    type: git
-    url: https://github.com/ros-o/collada_urdf.git
-    version: obese-devel
   common_msgs:
     type: git
     url: https://github.com/ros/common_msgs.git
