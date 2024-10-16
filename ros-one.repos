@@ -75,6 +75,10 @@ repositories:
     type: git
     url: https://github.com/mikeferguson/code_coverage.git
     version: master
+  collada_urdf:
+    type: git
+    url: https://github.com/ros-o/collada_urdf.git
+    version: obese-devel
   common_msgs:
     type: git
     url: https://github.com/ros/common_msgs.git
@@ -143,6 +147,10 @@ repositories:
     type: git
     url: https://github.com/ros-o/fake_joint
     version: obese-devel
+  fcl:
+    type: git
+    url: https://github.com/flexible-collision-library/fcl.git
+    version: 0.6.1
   filters:
     type: git
     url: https://github.com/ros/filters.git
@@ -159,6 +167,10 @@ repositories:
     type: git
     url: https://github.com/ros-drivers/freenect_stack.git
     version: master
+  gazebo_ros_pkgs:
+    type: git
+    url: https://github.com/ros-simulation/gazebo_ros_pkgs.git
+    version: noetic-devel
   gencpp:
     type: git
     url: https://github.com/ros-o/gencpp.git
@@ -183,6 +195,10 @@ repositories:
     type: git
     url: https://github.com/ros/genpy.git
     version: main
+  geometric_shapes:
+    type: git
+    url: https://github.com/ros-planning/geometric_shapes
+    version: noetic-devel
   geometry:
     type: git
     url: https://github.com/ros-o/geometry
@@ -267,6 +283,10 @@ repositories:
     type: git
     url: https://github.com/frankaemika/libfranka-release.git
     version: release/noetic/libfranka/0.9.2-1
+  librealsense2:
+    type: git
+    url: https://github.com/ros-o/librealsense.git
+    version: master
   media_export:
     type: git
     url: https://github.com/ros/media_export
@@ -323,6 +343,10 @@ repositories:
     type: git
     url: https://github.com/wg-perception/object_recognition_msgs.git
     version: 0.4.2
+  octomap/octomap:
+    type: tar
+    url: https://github.com/ros-gbp/octomap-release/archive/release/noetic/octomap/1.9.8-1.tar.gz
+    version: octomap-release-release-noetic-octomap-1.9.8-1
   octomap_msgs:
     type: git
     url: https://github.com/OctoMap/octomap_msgs.git
