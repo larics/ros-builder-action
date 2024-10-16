@@ -83,7 +83,7 @@ elif ubuntu-distro-info --all | grep -q "$DEB_DISTRO"; then
 		amd64)
 			export DISTRIBUTION_REPO=http://archive.ubuntu.com/ubuntu
 			;;
-		arm64,armhf)
+		arm64|armhf)
 			export DISTRIBUTION_REPO=http://ports.ubuntu.com/ubuntu-ports
 			;;
 		*)
