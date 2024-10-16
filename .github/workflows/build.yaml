@@ -11,8 +11,16 @@ on:
         required: false # defaults to 'one'
       DEB_DISTRO:
         type: string
-        description: The Debian/Ubuntu distribution codename to compile for.
+        description: The Debian/Ubuntu distribution codename to compile for
         required: false  # defaults to 'lsb_release -cs'
+      ARCH:
+        type: choice
+        required: true
+        description: CPU architecture
+        default: x64
+        options:
+          - x64
+          - arm64
       ROS_SOURCES:
         type: string
         description: ROS sources to compile. See README.md for details.
@@ -120,6 +128,7 @@ jobs:
   debs:
     timeout-minutes: 10080
     runs-on: self-hosted
+    # runs-on: [ubuntu-22.04, "${{ inputs.ARCH }}"]
     name: build debs
     outputs:
       LATEST_PACKAGE: ${{ steps.build.outputs.LATEST_PACKAGE }}
