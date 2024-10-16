@@ -15,7 +15,7 @@ on:
         required: false  # defaults to 'lsb_release -cs'
       ARCH:
         type: string
-        required: true
+        required: false
         description: CPU architecture
         default: x64
       ROS_SOURCES:
@@ -125,7 +125,7 @@ jobs:
   debs:
     timeout-minutes: 10080
     runs-on: self-hosted
-    # runs-on: [ubuntu-22.04, "${{ inputs.ARCH }}"]
+    #  runs-on: ${{ inputs.ARCH  == 'x64' && 'ubuntu-22.04' || inputs.ARCH }}
     name: build debs
     outputs:
       LATEST_PACKAGE: ${{ steps.build.outputs.LATEST_PACKAGE }}
