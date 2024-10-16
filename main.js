@@ -57,4 +57,4 @@ function cancel() {
   // escalate to SIGKILL after 5s
   setTimeout(function () { child.kill('SIGKILL') }, 5 * 1000)
 }
-setTimeout(cancel, timeout_minutes * 60 * 1000)
+// setTimeout(cancel, timeout_minutes * 60 * 1000)
