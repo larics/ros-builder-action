@@ -14,13 +14,10 @@ on:
         description: The Debian/Ubuntu distribution codename to compile for
         required: false  # defaults to 'lsb_release -cs'
       ARCH:
-        type: choice
+        type: string
         required: true
         description: CPU architecture
         default: x64
-        options:
-          - x64
-          - arm64
       ROS_SOURCES:
         type: string
         description: ROS sources to compile. See README.md for details.
