@@ -87,7 +87,7 @@ elif ubuntu-distro-info --all | grep -q "$DEB_DISTRO"; then
 			export DISTRIBUTION_REPO=http://ports.ubuntu.com/ubuntu-ports
 			;;
 		*)
-			gha_error "Unknown architecture: $ARCH"
+			gha_error "Unknown architecture: $(dpkg --print-architecture)"
 			ici_exit 1
 			;;
 	esac
