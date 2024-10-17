@@ -1,0 +1,5 @@
+repositories:
+  eigenpy:
+    type: tar
+    url: https://github.com/stack-of-tasks/eigenpy-ros-release/archive/release/noetic/eigenpy/2.9.2-1.tar.gz
+    version: eigenpy-ros-release-release-noetic-eigenpy-2.9.2-1
