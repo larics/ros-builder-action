@@ -1,3 +1,4 @@
+repositories:
   openslam_gmapping:
     type: git
     url: https://github.com/ros-perception/openslam_gmapping.git
