@@ -143,24 +143,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download debs from previous run
-        uses: actions/download-artifact@v4
-        if: inputs.DOWNLOAD_DEBS
-        continue-on-error: true
-        with:
-          name: debs
-          path: ${{ env.DEBS_PATH }}
-
-      - name: Determine CCACHE_ID
-        id: ccache-id
-        run: echo "CCACHE_ID=ccache-${DEB_DISTRO}-$(dpkg --print-architecture)-${ROS_SOURCES}" | tee -a "$GITHUB_OUTPUT"
-      - name: Restore ccache
-        id: restore-ccache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.ccache-id.outputs.CCACHE_ID }}
-
       - name: Build .deb packages
         uses: larics/ros-builder-action@main
         id: build
@@ -181,19 +163,6 @@ jobs:
       - name: Remove files comprising invalid chars # they would break artifact upload
         if: always() # always prepare files for upload
         run: find ${{ env.DEBS_PATH }} -name '*[<>:"\\|?*]*' -print -delete
-
-      - name: Delete old ccache
-        if: always() && steps.restore-ccache.outputs.cache-hit
-        continue-on-error: true
-        run: gh cache delete "${{ steps.restore-ccache.outputs.cache-primary-key }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Store ccache
-        uses: actions/cache/save@v4
-        if: always() # save cache on timeout or cancel too
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
       - name: Upload debs
         uses: actions/upload-artifact@v4
