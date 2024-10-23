@@ -59,8 +59,10 @@ function ici_import_repository {
 
   if [ -z "$URL_FRAGMENT" ] || [ "$URL_FRAGMENT" = "HEAD" ]; then
     ici_vcs_import "$ws_path" <<< "{repositories: {'$name': {type: 'git', url: '$url'}}}"
+    WS_SOURCE="${url%.git}"
   else
     ici_vcs_import "$ws_path" <<< "{repositories: {'$name': {type: 'git', url: '$url', version: '$URL_FRAGMENT'}}}"
+    WS_SOURCE="${url%.git}/commit/$URL_FRAGMENT"
   fi
 }
 
@@ -87,6 +89,7 @@ function ici_import {
       processor=(ici_vcs_import "$ws_path")
       ;;
   esac
+  WS_SOURCE=$(realpath "$src")
   ici_guard "${importer[@]}" "$src" | ici_guard "${processor[@]}"
 }
 
@@ -110,12 +113,22 @@ function prepare_ws {
   esac
 }
 
-function update_repo {
-  local old_path=$PWD
-  cd "$DEBS_PATH" || return 1
-  apt-ftparchive packages . > Packages
-  apt-ftparchive release  . > Release
-  cd "$old_path" || return 1
+function source_link {
+  local version=$1
+  local url
+
+  if git rev-parse --is-inside-work-tree &> /dev/null; then
+    url="$(git config --get remote.origin.url)"
+    url="${url%.git}/commit/$(git rev-parse HEAD)"
+  elif [ -f "$WS_SOURCE" ]; then
+    local repo; repo=$(realpath "$PWD")
+    repo=${repo#*/ws/}  # strip everyting before /ws/
+    repo=${repo%%/*}    # strip everything after next /
+    url=$(yq ".repositories.\"$repo\".url" "$WS_SOURCE")
+  else
+    url="$WS_SOURCE"
+  fi
+  echo "[$version]($url)"
 }
 
 function get_release_version {
@@ -135,13 +148,19 @@ function get_release_version {
 
 function pkg_exists {
   local pkg_version="${2%"$DEB_DISTRO"}"
-  local available; available=$(LANG=C apt-cache policy "$1" | sed -n "s#^\s*Candidate:\s\(.*\)$DEB_DISTRO\..*#\1#p")
-  if [ "$SKIP_EXISTING" == "true" ] && [ -n "$available" ] && [ "$available" != "(none)" ] && \
-     dpkg --compare-versions "$available" ">=" "$pkg_version"; then
-    echo "Skipped (existing version $available >= $pkg_version)"
+  local candidate; candidate=$(LANG=C apt-cache policy "$1" | sed -n "s#^\s*Candidate:\s\(.*\)#\1#p")
+  [ "$candidate" = "(none)" ] && candidate=""
+  local available="${candidate%"$DEB_DISTRO"*}"  # extract version number
+
+  if [ -n "$candidate" ] && ! dpkg --compare-versions "$available" "<=" "$pkg_version" ; then
+    gha_warning "$1: existing version newer: $available > $pkg_version"
+  fi
+  if [ "$SKIP_EXISTING" == "true" ] && [ -n "$candidate" ] && \
+     dpkg --compare-versions "$available" ">=" "$pkg_version" && ! "$SRC_PATH/scripts/upstream_rebuilds.py"; then
+    echo "Skipped (existing version $candidate >= $pkg_version)"
     return 0
   fi
-  echo "Building version $pkg_version"
+  echo "Building version $pkg_version (old: $candidate)"
   return 1
 }
 
@@ -149,6 +168,7 @@ function build_pkg {
   local old_path=$PWD
   local pkg_name=$1
   local pkg_path=$2
+  local opts
   local version
   local version_stamped
 
@@ -184,15 +204,19 @@ function build_pkg {
     --preserve --force-distribution "$DEB_DISTRO" \
     --urgency high -m "Append timestamp when binarydeb was built." || return 3
 
+  local version_link; version_link=$(source_link "${version%"$DEB_DISTRO"}") || true
   rm -rf .git
 
-  ici_label update_repo || return 1
-  SBUILD_OPTS="--verbose --chroot=sbuild --no-clean-source --no-run-lintian --dist=$DEB_DISTRO $EXTRA_SBUILD_OPTS"
+  # Fetch sbuild options from .repos yaml file
+  [ -f "$WS_SOURCE" ] && opts=$(yq ".sbuild_options.\"$pkg_name\"" "$WS_SOURCE") || opts=""
+  [ "$opts" != "null" ] || opts=""
+  [ -z "$opts" ] || opts="$EXTRA_SBUILD_OPTS $opts"
+
+  SBUILD_OPTS="--verbose --chroot=sbuild --no-clean-source --no-run-lintian --dist=$DEB_DISTRO $opts"
   ici_label "${SBUILD_QUIET[@]}" sg sbuild -c "sbuild $SBUILD_OPTS" || return 4
 
   "${CCACHE_QUIET[@]}" ici_label ccache -sv || return 1
-  gha_report_result "LATEST_PACKAGE" "$pkg_name"
-  BUILT_PACKAGES+=("$(deb_pkg_name "$pkg_name"): $version")
+  BUILT_PACKAGES+=("$(deb_pkg_name "$pkg_name"): $version_link")
 
   if [ "$INSTALL_TO_CHROOT" == "true" ]; then
     ici_color_output BOLD "Install package within chroot"
@@ -210,6 +234,8 @@ EOF
   log=$(ls -1t "$DEBS_PATH/$(deb_pkg_name "${pkg_name}" "$version_stamped")_"*.build | grep -P '(?<!Z)\.build' | head -1)
   mv "$(readlink -f "$log")" "${log/.build/.log}" # rename actual log file
   rm "$log" # remove symlink
+
+  ici_label update_repo
 }
 
 function get_python_release_version {
@@ -245,26 +271,28 @@ function build_python_pkg {
 
   # Get + Check release version
   version="$(get_python_release_version)" || return 5
+  local debian_version="${version#*-}"
   local deb_pkg_name; deb_pkg_name="python3-$(python3 setup.py --name)"
   pkg_exists "$deb_pkg_name" "$version" && return
 
-  ici_label update_repo || return 1
-  ici_label "${SBUILD_QUIET[@]}" python3 setup.py --command-packages=stdeb.command bdist_deb || return 4
+  local version_link; version_link=$(source_link "${version%"$DEB_DISTRO"}") || true
+  rm -rf .git
 
-  gha_report_result "LATEST_PACKAGE" "$pkg_name"
-  BUILT_PACKAGES+=("$deb_pkg_name: $version")
+  ici_label "${SBUILD_QUIET[@]}" python3 setup.py --command-packages=stdeb.command sdist_dsc --debian-version "$debian_version" bdist_deb || return 4
+
+  BUILT_PACKAGES+=("$deb_pkg_name: $version_link")
 
   # Move created files to $DEBS_PATH for deployment
   mv deb_dist/*.dsc deb_dist/*.tar.?z deb_dist/*.deb deb_dist/*.changes deb_dist/*.buildinfo "$DEBS_PATH"
+
+  ici_label update_repo
 }
 
 function build_source {
   local old_path=$PWD
   local ws_path="$PWD/ws"
 
-  ici_title "Build packages from $1"
-
-  prepare_ws "$ws_path" "$1"
+  ici_timed "$(ici_colorize BLUE BOLD "Setup workspace for $1")" prepare_ws "$ws_path" "$1"
   cd "$ws_path" || ici_exit 1
 
   # determine list of packages (names + folders)
@@ -277,19 +305,25 @@ function build_source {
   done < <(colcon list --topological-order $COLCON_PKG_SELECTION)
 
   ici_timed "Register new packages with rosdep" register_local_pkgs_with_rosdep
+  ici_timed update_repo
 
   local msg_prefix=""
   local total="${#PKG_NAMES[@]}"
   local idx
   for (( idx=0; idx < total; idx++ )); do
+    gha_report_result "LATEST_PACKAGE" "${PKG_NAMES[$idx]}"
+
     local pkg_desc="package $((idx+1))/$total: ${PKG_NAMES[$idx]} (${PKG_FOLDERS[$idx]})"
     ici_time_start "$(ici_colorize CYAN BOLD "Building $pkg_desc")"
 
     local exit_code=0
     if [ -f "${PKG_FOLDERS[$idx]}/package.xml" ]; then
       build_pkg "${PKG_NAMES[$idx]}" "${PKG_FOLDERS[$idx]}" || exit_code=$?
-    else
+    elif [ -f "${PKG_FOLDERS[$idx]}/setup.py" ]; then
       build_python_pkg "${PKG_NAMES[$idx]}" "${PKG_FOLDERS[$idx]}" || exit_code=$?
+    else
+      ici_warn "No package.xml or setup.py found"
+      exit_code=0
     fi
 
     if [ "$exit_code" != 0 ] ; then
@@ -303,7 +337,7 @@ function build_source {
 
       if [ "$CONTINUE_ON_ERROR" = false ]; then
         # exit with custom error message
-        ici_exit "$exit_code" gha_error "$msg_prefix on $pkg_desc. Continue with: --packages-start ${PKG_NAMES[$idx]}"
+        ici_exit "$exit_code" gha_error "$msg_prefix on $pkg_desc."
       else
         # fail later
         FAIL_EVENTUALLY=1
@@ -323,3 +357,4 @@ function build_all_sources {
 }
 
 export FAIL_EVENTUALLY
+export WS_SOURCE # current workspace source

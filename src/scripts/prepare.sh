@@ -19,16 +19,11 @@ ros_key_file="/etc/apt/keyrings/ros-archive-keyring.gpg"
 ici_append INSTALL_HOST_GPG_KEYS "sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o $ros_key_file"
 ici_append EXTRA_HOST_SOURCES "deb [signed-by=$ros_key_file] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main"
 
-# Configure DEBS_PATH as deb sources
-if [ -r "$DEBS_PATH/Release" ]; then
-	ici_append EXTRA_HOST_SOURCES "deb [trusted=yes] file://$(realpath "$DEBS_PATH") ./"
-fi
-
 # Configure sources
 ici_hook INSTALL_HOST_GPG_KEYS
 ici_timed "Configure EXTRA_HOST_SOURCES" configure_extra_host_sources
 
-ici_timed "Update apt package list" ici_asroot apt-get -qq update
+ici_timed "Update apt package list" ici_asroot apt-get update
 
 # Configure apt-cacher-ng
 echo apt-cacher-ng apt-cacher-ng/tunnelenable boolean true | ici_asroot debconf-set-selections
@@ -44,6 +39,11 @@ ici_timed "Install bloom" ici_asroot pip install -U git+https://github.com/rhasc
 # Install patched vcstool to allow for treeless clones
 ici_timed "Install vcstool" ici_asroot pip install -U git+https://github.com/rhaschke/vcstool.git@master
 
+# Remove ros2 package repository, now that rosdep and colcon are installed
+# This repo might have newer versions, e.g. of colcon, than the ones to be built
+ici_asroot sed -i '/packages.ros.org\/ros2\/ubuntu/d' "$REPOS_LIST_FILE"
+ici_timed "Update apt package list" ici_asroot apt-get update
+
 # remove existing rosdep config to avoid conflicts with rosdep init
 ici_asroot rm -f /etc/ros/rosdep/sources.list.d/20-default.list
 ici_timed "rosdep init" ici_asroot rosdep init
@@ -55,7 +55,13 @@ ici_end_fold
 
 ici_title "Prepare build environment"
 
-ici_timed "Create \$DEBS_PATH=$DEBS_PATH" mkdir -p "$DEBS_PATH"
+# Configure DEBS_PATH as deb sources
+ici_time_start "Configure $DEBS_PATH as deb sources"
+echo "deb [trusted=yes] file://$(realpath "$DEBS_PATH") ./" | ici_asroot tee -a "$DEBS_LIST_FILE"
+ici_label mkdir -p "$DEBS_PATH"
+ici_label update_repo
+ici_time_end
+
 ici_timed "Declare EXTRA_ROSDEP_SOURCES" declare_extra_rosdep_sources
 ici_timed "Download existing rosdep declarations" load_local_yaml
 

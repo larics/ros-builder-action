@@ -44,17 +44,7 @@ jobs:
         with:
           submodules: recursive
       - run: ./test/bats/bin/bats --formatter pretty test/*.bats
-
-      - name: Check that *.js scripts are all identical to main.js
-        run: |
-          err=0
-          for f in $(find . -iname "*.js" -not -path "./node_modules/*"); do
-            if ! diff -q $f main.js; then
-              echo "::warning:: $f differs from main.js"
-              err=1
-            fi
-          done
-          exit $err
+      - run: test/redirect.sh
 
   build:
     needs: unittests
@@ -107,7 +97,7 @@ jobs:
     if: ${{ !cancelled() }}
     uses: ubi-agni/ros-builder-action/.github/workflows/deploy.yaml@main
     with:
-      DEBS_ARTIFACT_NAME: ${{ matrix.NAME }}
+      DEBS_ARTIFACT_NAME: skip
       DEPLOY_URL: self#ci
       PUSH_MODE: ${{ matrix.PUSH_MODE }}
       MESSAGE: "ci: ${{ matrix.NAME }} ${{ matrix.PUSH_MODE }}"

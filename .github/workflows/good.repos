@@ -3,6 +3,10 @@ repositories:
     type: git
     url: https://github.com/ubi-agni/catkin
     version: noetic-devel
+  catkin_tools:
+    type: git
+    url: https://github.com/catkin/catkin_tools
+    version: main
   genmsg:
     type: git
     url: https://github.com/ros/genmsg.git
@@ -15,3 +19,6 @@ repositories:
     type: git
     url: https://github.com/ros/roscpp_core.git
     version: noetic-devel
+
+sbuild_options:
+  genmsg: --jobs=2

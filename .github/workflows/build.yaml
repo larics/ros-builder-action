@@ -37,6 +37,10 @@ on:
         description: Continue building from previous debs artifact?
         required: true
         default: false
+      CONTINUE_FROM_PKG:
+        type: string
+        description: package to continue building from
+        required: false
       INSTALL_TO_CHROOT:
         type: boolean
         description: Incrementally install built packages within the chroot?
@@ -127,6 +131,7 @@ jobs:
     runs-on: self-hosted
     #  runs-on: ${{ inputs.ARCH  == 'x64' && 'ubuntu-22.04' || inputs.ARCH }}
     name: build debs
+    continue-on-error: true
     outputs:
       LATEST_PACKAGE: ${{ steps.build.outputs.LATEST_PACKAGE }}
 
@@ -146,16 +151,15 @@ jobs:
           name: debs
           path: ${{ env.DEBS_PATH }}
 
+      - name: Determine CCACHE_ID
+        id: ccache-id
+        run: echo "CCACHE_ID=ccache-${DEB_DISTRO}-$(dpkg --print-architecture)-${ROS_SOURCES}" | tee -a "$GITHUB_OUTPUT"
       - name: Restore ccache
         id: restore-ccache
         uses: actions/cache/restore@v4
-        env:
-          CCACHE_ID: "ccache-${{ inputs.DEB_DISTRO || vars.DEB_DISTRO }}-${{ inputs.ROS_SOURCES || vars.ROS_SOURCES }}"
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ env.CCACHE_ID }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ env.CCACHE_ID }}
+          key: ${{ steps.ccache-id.outputs.CCACHE_ID }}
 
       - name: Build .deb packages
         uses: larics/ros-builder-action@main
@@ -165,6 +169,7 @@ jobs:
           BUILD_TIMEOUT: ${{ inputs.BUILD_TIMEOUT || vars.BUILD_TIMEOUT }}
         env:
           COLCON_PKG_SELECTION: ${{ inputs.COLCON_PKG_SELECTION || vars.COLCON_PKG_SELECTION || '' }}
+          CONTINUE_FROM_PKG: ${{ inputs.CONTINUE_FROM_PKG }}
           EXTRA_SBUILD_CONFIG: ${{ inputs.EXTRA_SBUILD_CONFIG || vars.EXTRA_SBUILD_CONFIG }}
           EXTRA_SBUILD_OPTS: ${{ inputs.EXTRA_SBUILD_OPTS || vars.EXTRA_SBUILD_OPTS }}
           DEB_BUILD_OPTIONS: ${{ inputs.DEB_BUILD_OPTIONS || vars.DEB_BUILD_OPTIONS || 'nocheck' }}
@@ -177,6 +182,12 @@ jobs:
         if: always() # always prepare files for upload
         run: find ${{ env.DEBS_PATH }} -name '*[<>:"\\|?*]*' -print -delete
 
+      - name: Delete old ccache
+        if: always() && steps.restore-ccache.outputs.cache-hit
+        continue-on-error: true
+        run: gh cache delete "${{ steps.restore-ccache.outputs.cache-primary-key }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Store ccache
         uses: actions/cache/save@v4
         if: always() # save cache on timeout or cancel too
@@ -191,4 +202,5 @@ jobs:
         with:
           name: ${{ inputs.DEBS_ARTIFACT_NAME || 'debs' }}
           path: ${{ env.DEBS_PATH }}
+          overwrite: true
           if-no-files-found: error
